@@ -9,65 +9,141 @@ from logger import log_line
 class ChannelState:
     def __init__(self, cfg):
         self.cfg = cfg
-        self.name = cfg["name"]
-        self.env_path = cfg["env"]
+        self.name = cfg.get("name", "default_channel")
+        self.env_path = cfg.get("env_path", ".env")
         self.uploads_today = 0
         self.last_reset = datetime.date.today()
-        self.ramp_start = datetime.date.today()
+        self.ramp_start = cfg.get("ramp_start", datetime.date.today())
+        self.max_uploads_per_day = cfg.get("max_uploads_per_day", 3)
 
     def reset_daily_if_needed(self):
         if datetime.date.today() != self.last_reset:
             self.uploads_today = 0
             self.last_reset = datetime.date.today()
 
-    def allowed_today(self):
-        days = (datetime.date.today() - self.ramp_start).days
-        ramp_days = self.cfg.get("ramp_days", 7)
-        ramp = min(days, ramp_days)
-        min_u = self.cfg.get("min_uploads_per_day", 1)
-        max_u = self.cfg.get("max_uploads_per_day", 3)
-        if ramp_days <= 1:
-            return max_u
-        allowed = int(min_u + (max_u - min_u) * (ramp / ramp_days))
-        return max(1, allowed)
+    def can_upload(self):
+        self.reset_daily_if_needed()
+        return self.uploads_today < self.max_uploads_per_day
 
     def record_upload(self):
         self.uploads_today += 1
 
+    def uploads_remaining(self):
+        self.reset_daily_if_needed()
+        return self.max_uploads_per_day - self.uploads_today
+
 class ChannelManager:
-    def __init__(self, channels_cfg):
-        self.channels_cfg = channels_cfg
-        self.states = {c["name"]: ChannelState(c) for c in channels_cfg}
-
-    def load_env_for_channel(self, env_path):
-        load_dotenv(env_path, override=True)
-
-    def get_youtube_for_channel(self, channel_cfg):
-        # load env for that channel
-        self.load_env_for_channel(channel_cfg["env"])
+    """
+    Multi-channel manager that loads credentials from .env or channel configs.
+    Designed for easy expansion: add REFRESH_TOKEN_<NAME> to .env to add channels.
+    
+    Usage:
+        # Single channel from .env (default)
+        mgr = ChannelManager()
+        youtube = mgr.get_youtube_for_channel("doughvinci")
+        
+        # Or multi-channel from config
+        channels = [{"name": "ch1", "refresh_token_env": "REFRESH_TOKEN_CH1"}, ...]
+        mgr = ChannelManager(channels_config=channels)
+    """
+    
+    def __init__(self, channels_config=None):
+        """
+        Initialize channel manager.
+        
+        Args:
+            channels_config: List of channel dicts with 'name' and 'refresh_token_env' keys.
+                           If None, will use single default channel from .env.
+        """
+        load_dotenv()  # Load .env automatically
+        
+        if channels_config is None:
+            # Single-channel mode: use REFRESH_TOKEN_DOUGHVINCI from .env
+            self.channels_config = [
+                {
+                    "name": "doughvinci",
+                    "refresh_token_env": "REFRESH_TOKEN_DOUGHVINCI"
+                }
+            ]
+        else:
+            self.channels_config = channels_config
+        
+        self.states = {}
+        for ch in self.channels_config:
+            name = ch["name"]
+            self.states[name] = ChannelState(ch)
+    
+    def get_youtube_for_channel(self, channel_name=None):
+        """
+        Build and return YouTube client for a channel.
+        
+        Args:
+            channel_name: Name of channel. If None, uses first channel.
+        
+        Returns:
+            Authenticated youtube resource object.
+        """
+        if channel_name is None:
+            channel_name = self.channels_config[0]["name"]
+        
+        # Find channel config
+        channel_cfg = None
+        for ch in self.channels_config:
+            if ch["name"] == channel_name:
+                channel_cfg = ch
+                break
+        
+        if channel_cfg is None:
+            raise ValueError(f"Channel '{channel_name}' not found in config")
+        
+        # Load refresh token from environment
+        refresh_token_env_var = channel_cfg.get("refresh_token_env", "REFRESH_TOKEN")
+        refresh_token = os.getenv(refresh_token_env_var)
+        
+        if not refresh_token:
+            raise ValueError(f"Environment variable {refresh_token_env_var} not set for channel {channel_name}")
+        
+        # Build credentials
         creds = Credentials(
             None,
-            refresh_token=os.getenv("REFRESH_TOKEN"),
+            refresh_token=refresh_token,
             client_id=os.getenv("CLIENT_ID"),
             client_secret=os.getenv("CLIENT_SECRET"),
             token_uri="https://oauth2.googleapis.com/token"
         )
+        
+        # Build YouTube client
         youtube = build("youtube", "v3", credentials=creds)
-        # also build analytics client
+        
+        # Attach analytics client if available
         try:
             analytics = build("youtubeAnalytics", "v2", credentials=creds)
-            youtube.analytics = lambda : analytics
+            youtube.analytics = analytics
         except Exception:
-            log_line("Analytics client not available for channel " + channel_cfg["name"])
+            log_line(f"Analytics client not available for channel {channel_name}")
+        
         return youtube
-
-    def get_state(self, name):
-        return self.states[name]
-
-    def record_upload(self, name):
-        self.states[name].record_upload()
-
+    
+    def get_state(self, channel_name=None):
+        """Get channel state."""
+        if channel_name is None:
+            channel_name = self.channels_config[0]["name"]
+        return self.states.get(channel_name)
+    
+    def record_upload(self, channel_name=None):
+        """Record an upload for a channel."""
+        if channel_name is None:
+            channel_name = self.channels_config[0]["name"]
+        state = self.get_state(channel_name)
+        if state:
+            state.record_upload()
+    
+    def get_all_channels(self):
+        """Return list of all configured channels."""
+        return [ch["name"] for ch in self.channels_config]
+    
     def find_thumbnail_for(self, file_path):
+        """Find thumbnail file matching video file."""
         base = os.path.splitext(file_path)[0]
         for ext in (".jpg", ".png", ".webp"):
             p = base + ext
