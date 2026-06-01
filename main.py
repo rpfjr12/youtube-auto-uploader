@@ -6,7 +6,7 @@ from uploader import upload_video
 def get_youtube():
     creds = Credentials(
         None,
-        refresh_token=os.getenv("REFRESH_TOKEN"),
+        refresh_token=os.getenv("REFRESH_TOKEN_DOUGHVINCI"),
         client_id=os.getenv("CLIENT_ID"),
         client_secret=os.getenv("CLIENT_SECRET"),
         token_uri="https://oauth2.googleapis.com/token"
