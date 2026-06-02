@@ -1,0 +1,62 @@
+%%{init: {'theme':'default'}}%%
+graph LR
+    subgraph Core["Core System"]
+        A["main.py"]
+        B["scheduler.py"]
+        C["uploader.py"]
+        D["video_generator.py"]
+        E["script_generator.py"]
+        F["metadata.py"]
+    end
+
+    subgraph Modules["Optimization Modules"]
+        M1["title_optimizer"]
+        M2["description_optimizer"]
+        M3["tag_generator"]
+        M4["thumbnail_generator"]
+        M5["affiliate_link_generator"]
+        M6["trending_topic_discovery"]
+        M7["frequency_scaler"]
+        M8["multi_channel_support"]
+    end
+
+    subgraph Utilities["Utilities"]
+        LOG["logger.py"]
+        CFG["config.py"]
+        CM["channel_manager.py"]
+    end
+
+    A --> B
+    B --> C
+    B --> D
+    B --> E
+    B --> F
+    
+    F --> M1
+    F --> M2
+    F --> M3
+    F --> M4
+    
+    M2 --> M5
+    
+    B --> M6
+    B --> M7
+    B --> M8
+    
+    B --> LOG
+    A --> LOG
+    C --> LOG
+    
+    B --> CFG
+    A --> CFG
+    
+    B --> CM
+    A --> CM
+    M8 --> CM
+    
+    style Core fill:#4c6ef5,stroke:#2c3e50,color:#fff
+    style Modules fill:#12b886,stroke:#2c3e50,color:#fff
+    style Utilities fill:#f08c00,stroke:#2c3e50,color:#fff
+    
+    classDef independent fill:#90ee90,stroke:#2c3e50
+    class M1,M3,M4,M5,M6,M7 independent

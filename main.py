@@ -130,6 +130,11 @@ def main():
         help="Run a single test upload (no scheduling)"
     )
     parser.add_argument(
+        "--github-actions",
+        action="store_true",
+        help="Run in GitHub Actions mode: one upload then exit cleanly"
+    )
+    parser.add_argument(
         "--times",
         type=str,
         default="09:00,14:00,20:00",
@@ -179,14 +184,26 @@ def main():
         channel_name=args.channel
     )
     
-    if args.test:
-        log_line("Running single test upload...")
-        scheduler.run_once()
-        log_line("Test upload completed")
+    if args.test or args.github_actions:
+        log_line("Running single upload job...")
+        try:
+            scheduler.run_once()
+            log_line("✓ Upload completed successfully")
+            sys.exit(0)
+        except Exception as e:
+            log_line(f"✗ Upload failed: {e}")
+            sys.exit(1)
     else:
         log_line("Starting automated scheduler...")
         log_line("(Press Ctrl+C to stop)")
-        scheduler.run()
+        try:
+            scheduler.run(once_only=False)
+        except KeyboardInterrupt:
+            log_line("Scheduler stopped")
+            sys.exit(0)
+        except Exception as e:
+            log_line(f"ERROR: {e}")
+            sys.exit(1)
 
 
 if __name__ == "__main__":

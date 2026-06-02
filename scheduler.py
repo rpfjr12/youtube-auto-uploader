@@ -151,8 +151,20 @@ class YouTubeScheduler:
         """
         self._run_upload_job()
     
-    def run(self):
-        """Start the scheduler loop (blocks forever)."""
+    def run(self, once_only=False):
+        """
+        Start the scheduler loop.
+        
+        Args:
+            once_only: If True, run once and exit (for GitHub Actions).
+                      If False, run forever in daemon mode.
+        """
+        if once_only:
+            log_line("Running single upload job (GitHub Actions mode - will exit after)")
+            self._run_upload_job()
+            log_line("Upload job completed, exiting cleanly")
+            return
+        
         log_line("Starting scheduler loop. Press Ctrl+C to stop.")
         try:
             while True:

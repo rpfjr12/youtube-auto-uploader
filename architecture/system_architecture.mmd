@@ -1,0 +1,82 @@
+%%{init: {'theme':'default', 'flowchart': {'curve': 'linear'}}}%%
+graph TB
+    subgraph "GitHub Actions / Local Execution"
+        MAIN["main.py<br/>(Entry Point)"]
+        SYS["System Check<br/>- Credentials<br/>- API Connection<br/>- Folders"]
+    end
+
+    subgraph "Core Workflow"
+        SCH["scheduler.py<br/>(Job Orchestrator)"]
+        GEN["script_generator.py<br/>(Script Gen)"]
+        VID["video_generator.py<br/>(Video Gen 2-5 min)"]
+        META["metadata.py<br/>(Metadata Gen)"]
+        UP["uploader.py<br/>(YouTube Upload)"]
+    end
+
+    subgraph "Optimization Modules"
+        TIT["📚 Title Optimizer<br/>- Power Words<br/>- Numbers<br/>- Length Check"]
+        DESC["📝 Description Optimizer<br/>- Timestamps<br/>- Keywords<br/>- CTAs"]
+        TAG["🏷️ Tag Generator<br/>- Keyword Extraction<br/>- Topic Tags<br/>- Compliance"]
+        THU["🖼️ Thumbnail Generator<br/>- Auto Colors<br/>- Emoji Integration<br/>- Border Styling"]
+    end
+
+    subgraph "Discovery & Intelligence"
+        TREND["🔍 Trending Discovery<br/>- Niche Trends<br/>- Seasonal Topics<br/>- Recommendations"]
+        FREQ["📊 Frequency Scaler<br/>- Performance Analysis<br/>- Risk Scoring<br/>- Optimization"]
+        AFF["🔗 Affiliate Generator<br/>- Product Detection<br/>- Link Generation<br/>- Formatting"]
+    end
+
+    subgraph "Multi-Channel"
+        MULTI["🌐 Multi-Channel Support<br/>- Config Management<br/>- Per-Channel Schedule<br/>- Batch Upload"]
+    end
+
+    subgraph "Output & Persistence"
+        LOGS["logs/"]
+        UPL["uploads/"]
+        DB["channel_config.json<br/>analytics_data.json"]
+    end
+
+    MAIN --> SYS
+    SYS --> SCH
+    
+    SCH --> GEN
+    GEN --> VID
+    
+    VID --> TIT
+    VID --> DESC
+    VID --> TAG
+    VID --> THU
+    
+    TIT --> META
+    DESC --> META
+    TAG --> META
+    THU --> META
+    
+    META --> TREND
+    TREND --> FREQ
+    FREQ --> AFF
+    AFF --> MULTI
+    
+    MULTI --> UP
+    UP --> LOGS
+    UP --> UPL
+    UP --> DB
+
+    style MAIN fill:#ff6b6b
+    style SYS fill:#ff6b6b
+    style SCH fill:#4c6ef5
+    style GEN fill:#4c6ef5
+    style VID fill:#4c6ef5
+    style META fill:#4c6ef5
+    style UP fill:#4c6ef5
+    
+    style TIT fill:#12b886
+    style DESC fill:#12b886
+    style TAG fill:#12b886
+    style THU fill:#12b886
+    
+    style TREND fill:#f08c00
+    style FREQ fill:#f08c00
+    style AFF fill:#f08c00
+    
+    style MULTI fill:#7c3aed

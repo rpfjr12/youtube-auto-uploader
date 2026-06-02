@@ -1,0 +1,68 @@
+%%{init: {'theme':'default'}}%%
+sequenceDiagram
+    participant CLI as Command Line
+    participant Main as main.py
+    participant Sched as scheduler.py
+    participant Gen as Generators
+    participant Opt as Optimizers
+    participant YT as YouTube API
+    participant Log as Logger
+
+    CLI->>Main: python3 main.py --github-actions
+    Main->>Main: System Check
+    Main->>Log: ✓ System Ready
+    
+    Main->>Sched: Create Scheduler
+    Main->>Sched: run_once()
+    
+    Note over Sched: BEGIN UPLOAD JOB
+    Sched->>Log: Starting upload job
+    
+    Sched->>Gen: Generate script
+    Gen-->>Sched: script_dict
+    Sched->>Log: ✓ Script generated
+    
+    Sched->>Gen: Generate video (2-5 min)
+    Gen->>Gen: MoviePy or fallback
+    Gen-->>Sched: video.mp4
+    Sched->>Log: ✓ Video generated
+    
+    Sched->>Opt: Optimize title
+    Opt-->>Sched: optimized_title
+    
+    Sched->>Opt: Optimize description
+    Opt-->>Sched: optimized_desc
+    
+    Sched->>Opt: Generate tags
+    Opt-->>Sched: tags[]
+    
+    Sched->>Opt: Generate thumbnail
+    Opt-->>Sched: thumbnail.png
+    
+    Sched->>Gen: Generate metadata
+    Gen-->>Sched: title, desc, tags
+    Sched->>Log: ✓ Metadata generated
+    
+    Sched->>Sched: Get YouTube client
+    
+    Sched->>YT: Insert video request
+    YT->>YT: Upload chunks (5-10 min)
+    Note over YT: With timeout protection<br/>(1 hour max)
+    
+    YT-->>Sched: video_id
+    Sched->>Log: ✓ Upload complete
+    
+    Sched->>Sched: Record upload
+    Sched->>Log: Uploads remaining: X
+    
+    Note over Sched: END UPLOAD JOB
+    
+    Sched-->>Main: Job completed
+    Main->>Log: ✓ ALL CHECKS PASSED
+    Main->>CLI: Exit code 0
+    
+    Note over CLI: Process exits cleanly<br/>Ready for next run
+    
+    rect rgba(100, 200, 100, 0.1)
+        Note over Sched: Total Time:<br/>10-25 minutes<br/>(under 6 hour limit)
+    end

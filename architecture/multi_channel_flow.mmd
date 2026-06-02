@@ -1,0 +1,44 @@
+%%{init: {'theme':'default', 'flowchart': {'curve': 'linear'}}}%%
+graph TD
+    A["MultiChannelScheduler<br/>Loads channel_config.json"]
+    
+    A --> B{Get Active<br/>Channels}
+    
+    B --> C["Main Channel<br/>UCmain123<br/>Times: 09:00, 14:00<br/>Topics: money, motivation"]
+    B --> D["Backup Channel<br/>UCbackup456<br/>Times: 20:00<br/>Topics: psychology"]
+    B --> E["Disabled Channel<br/>(Skipped)"]
+    
+    C --> F["Generate Video<br/>For Main Channel"]
+    D --> G["Generate Video<br/>For Backup Channel"]
+    
+    F --> H["Optimize Metadata<br/>- Title<br/>- Description<br/>- Tags<br/>- Thumbnail"]
+    
+    G --> I["Optimize Metadata<br/>- Title<br/>- Description<br/>- Tags<br/>- Thumbnail"]
+    
+    H --> J{Sync Upload?}
+    I --> J
+    
+    J -->|Yes| K["Upload to<br/>All Active Channels"]
+    J -->|No| L["Upload Separately<br/>Per Channel"]
+    
+    K --> M["Video 1 URL"]
+    K --> N["Video 2 URL"]
+    
+    L --> M
+    L --> N
+    
+    M --> O["Update channel_config.json"]
+    N --> O
+    
+    O --> P["Log Results<br/>- Uploads: 2<br/>- Success: 2<br/>- Failures: 0"]
+    
+    style A fill:#7c3aed,color:#fff
+    style C fill:#4c6ef5,color:#fff
+    style D fill:#4c6ef5,color:#fff
+    style E fill:#999,color:#fff
+    style H fill:#12b886,color:#fff
+    style I fill:#12b886,color:#fff
+    style K fill:#f08c00,color:#fff
+    style L fill:#f08c00,color:#fff
+    style O fill:#ff6b6b,color:#fff
+    style P fill:#51cf66,color:#fff
