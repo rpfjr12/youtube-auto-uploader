@@ -16,8 +16,12 @@ Usage:
 
 import logging
 import os
+import random
 from pathlib import Path
 from typing import Optional, Tuple
+
+from modules.randomization_engine import random_thumbnail_variations
+from modules.reuse_protection import hash_file, is_duplicate, register_asset
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +80,8 @@ def generate_thumbnail(
     
     if config is None:
         config = ThumbnailConfig()
+
+    config = random_thumbnail_variations(config)
     
     if not config.enable_thumbnails:
         logger.debug("Thumbnails disabled in configuration")
@@ -136,6 +142,34 @@ def generate_thumbnail(
     output_path = Path(output_dir) / f"thumbnail_{topic}_{Path(title).stem}.png"
     img.save(str(output_path))
     
+    fingerprint = hash_file(str(output_path))
+    if is_duplicate("thumbnail", fingerprint):
+        backup_output_path = Path(output_dir) / f"thumbnail_{topic}_{Path(title).stem}_{random.randint(100,999)}.png"
+        config = random_thumbnail_variations(config)
+        img = Image.new("RGB", (config.width, config.height), color=get_color_for_topic(topic, config))
+        draw = ImageDraw.Draw(img)
+        title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 80) if hasattr(ImageFont, 'truetype') else ImageFont.load_default()
+        display_title = title[:max_title_length]
+        if len(title) > max_title_length:
+            display_title += "..."
+        if emoji:
+            display_title = f"{emoji} {display_title}"
+        bbox = draw.textbbox((0, 0), display_title, font=title_font)
+        text_width = bbox[2] - bbox[0]
+        x = (config.width - text_width) // 2
+        y = (config.height - (bbox[3] - bbox[1])) // 2
+        draw.text((x, y), display_title, fill=config.text_color, font=title_font)
+        border_color = tuple(max(0, c - 50) for c in get_color_for_topic(topic, config))
+        draw.rectangle(
+            [(0, 0), (config.width - 1, config.height - 1)],
+            outline=border_color,
+            width=config.border_width
+        )
+        img.save(str(backup_output_path))
+        output_path = backup_output_path
+        fingerprint = hash_file(str(output_path))
+
+    register_asset("thumbnail", fingerprint, {"topic": topic})
     logger.info(f"Thumbnail saved: {output_path}")
     return str(output_path)
 

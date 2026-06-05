@@ -2,10 +2,11 @@ import os
 import time
 from googleapiclient.http import MediaFileUpload
 from logger import log_line
+from modules.playlist_funneling import manage_playlist_for_upload
 
 UPLOAD_TIMEOUT_SECONDS = 3600  # 1 hour max per upload
 
-def upload_video(youtube, file_path, title, description, tags):
+def upload_video(youtube, file_path, title, description, tags, channel_name="default"):
     """
     Upload a video to YouTube with timeout protection.
     
@@ -15,6 +16,7 @@ def upload_video(youtube, file_path, title, description, tags):
         title: Video title
         description: Video description
         tags: List of tags
+        channel_name: Optional channel name to funnel videos into playlists
     
     Returns:
         Video ID on success
@@ -68,4 +70,10 @@ def upload_video(youtube, file_path, title, description, tags):
             # Continue loop to retry
 
     log_line(f"Upload complete: {response['id']} ({chunk_count} chunks in {elapsed:.1f}s)")
-    return response["id"]
+    video_id = response["id"]
+    try:
+        manage_playlist_for_upload(youtube, video_id, channel_name)
+        log_line(f"Added video {video_id} to playlist funnel for channel {channel_name}")
+    except Exception as e:
+        log_line(f"WARNING: Playlist funneling failed: {e}")
+    return video_id

@@ -58,13 +58,28 @@ class ChannelManager:
         load_dotenv()  # Load .env automatically
         
         if channels_config is None:
-            # Single-channel mode: use REFRESH_TOKEN_DOUGHVINCI from .env
-            self.channels_config = [
-                {
-                    "name": "doughvinci",
-                    "refresh_token_env": "REFRESH_TOKEN_DOUGHVINCI"
-                }
-            ]
+            self.channels_config = []
+            for env_name, env_value in os.environ.items():
+                if not env_name.startswith("REFRESH_TOKEN_"):
+                    continue
+                channel_name = env_name.replace("REFRESH_TOKEN_", "").lower()
+                if not channel_name:
+                    continue
+                preferred_niche = os.getenv(f"PREFERRED_NICHE_{channel_name.upper()}")
+                self.channels_config.append({
+                    "name": channel_name,
+                    "refresh_token_env": env_name,
+                    "preferred_niche": preferred_niche
+                })
+            if not self.channels_config:
+                # Single-channel default fallback
+                self.channels_config = [
+                    {
+                        "name": "doughvinci",
+                        "refresh_token_env": "REFRESH_TOKEN_DOUGHVINCI",
+                        "preferred_niche": "personal finance"
+                    }
+                ]
         else:
             self.channels_config = channels_config
         

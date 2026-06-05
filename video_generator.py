@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 from datetime import datetime
+from modules.reuse_protection import hash_file, register_asset
 
 def generate_video(script_text, title, topic="general", duration_seconds=45):
     """
@@ -89,6 +90,7 @@ def generate_video(script_text, title, topic="general", duration_seconds=45):
         logger=None
     )
     
+    register_asset("video", hash_file(output_path), {"topic": topic})
     return output_path
 
 
@@ -168,7 +170,8 @@ def generate_simple_video(script_text, title, topic="general", duration_seconds=
             subprocess.run(cmd, capture_output=True, check=True)
         except Exception as e:
             raise RuntimeError(f"Failed to create video with ffmpeg: {e}")
-    
+
+    register_asset("video", hash_file(output_path), {"topic": topic})
     return output_path
 
 

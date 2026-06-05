@@ -1,6 +1,8 @@
 # metadata.py
 import random
 from datetime import datetime
+from modules.randomization_engine import randomize_tag_order, randomize_description_blocks
+from modules.reuse_protection import ensure_unique_metadata
 
 TITLE_TEMPLATES = [
     "{topic} Explained Fast",
@@ -78,12 +80,15 @@ def generate_metadata_from_script(script_dict, channel_name="MyChannel"):
     # Add topic-specific tags
     topic_tags = random.sample(TAG_POOLS.get(topic_key, TAG_POOLS["default"]), 
                                min(3, len(TAG_POOLS.get(topic_key, TAG_POOLS["default"]))))
-    tags = list(set(tags + topic_tags))[:12]  # Combine and limit
+    tags = list(dict.fromkeys(tags + topic_tags))[:12]  # Combine, dedupe and limit
+    tags = randomize_tag_order(tags)
+    description = randomize_description_blocks(description)
     
     # Generate hashtags for description
     hashtags = random.sample(HASHTAGS, min(5, len(HASHTAGS)))
     hashtags_text = " ".join(hashtags)
     
+    title, description, tags = ensure_unique_metadata(title, description, tags)
     return title, description, tags, hashtags_text
 
 

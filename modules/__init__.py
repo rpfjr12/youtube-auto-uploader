@@ -24,4 +24,10 @@ __all__ = [
     "trending_topic_discovery",
     "frequency_scaler",
     "multi_channel_support",
+    "randomization_engine",
+    "human_timing",
+    "reuse_protection",
+    "high_cpm_selector",
+    "playlist_funneling",
+    "retention_templates",
 ]

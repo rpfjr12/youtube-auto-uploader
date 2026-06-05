@@ -1,0 +1,56 @@
+name: YouTube Automation - Doughvinci
+
+on:
+  schedule:
+    - cron: "15 8 * * *"
+    - cron: "30 13 * * *"
+    - cron: "45 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  run-automation:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Cache FFmpeg binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.ffmpeg
+          key: ffmpeg-${{ runner.os }}-v1
+          restore-keys: |
+            ffmpeg-${{ runner.os }}-
+
+      - name: Install FFmpeg
+        run: |
+          mkdir -p "$HOME/.ffmpeg"
+          if [ ! -x "$HOME/.ffmpeg/ffmpeg" ]; then
+            cd "$HOME/.ffmpeg"
+            curl -L -o ffmpeg.tar.xz https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+            tar -xJf ffmpeg.tar.xz --strip-components=1
+            rm -f ffmpeg.tar.xz
+          fi
+          echo "$HOME/.ffmpeg" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create .env file
+        run: |
+          echo "CLIENT_ID=${{ secrets.CLIENT_ID_DOUGHVINCI }}" >> .env
+          echo "CLIENT_SECRET=${{ secrets.CLIENT_SECRET_DOUGHVINCI }}" >> .env
+          echo "REFRESH_TOKEN_DOUGHVINCI=${{ secrets.REFRESH_TOKEN_DOUGHVINCI }}" >> .env
+          echo "YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}" >> .env
+
+      - name: Run YouTube automation scheduler for Doughvinci
+        run: |
+          python3 main.py --times "08:15,13:30,18:45" --channel "doughvinci" --github-actions

@@ -23,6 +23,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from logger import log_line
 from scheduler import YouTubeScheduler
+from channel_manager import ChannelManager
 
 # Load .env automatically
 load_dotenv()
@@ -48,12 +49,21 @@ def verify_credentials():
     """Verify that credentials are properly loaded from .env"""
     client_id = os.getenv("CLIENT_ID")
     client_secret = os.getenv("CLIENT_SECRET")
-    refresh_token = os.getenv("REFRESH_TOKEN_DOUGHVINCI")
-    
-    if not all([client_id, client_secret, refresh_token]):
-        log_line("ERROR: Missing credentials in .env file")
+    if not all([client_id, client_secret]):
+        log_line("ERROR: Missing CLIENT_ID or CLIENT_SECRET in .env file")
         return False
-    
+
+    manager = ChannelManager()
+    missing_tokens = []
+    for channel in manager.channels_config:
+        refresh_var = channel.get("refresh_token_env")
+        if refresh_var and not os.getenv(refresh_var):
+            missing_tokens.append(refresh_var)
+
+    if missing_tokens:
+        log_line(f"ERROR: Missing refresh tokens for channels: {', '.join(missing_tokens)}")
+        return False
+
     log_line("✓ Credentials loaded from .env")
     return True
 

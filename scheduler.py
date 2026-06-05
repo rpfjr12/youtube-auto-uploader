@@ -20,6 +20,8 @@ from datetime import datetime
 from pathlib import Path
 from logger import log_line
 from channel_manager import ChannelManager
+from modules.human_timing import HumanTiming
+from modules.trending_topic_discovery import get_recommended_topics
 from script_generator import generate_script
 from video_generator import generate_video, generate_simple_video
 from metadata import generate_metadata_from_script
@@ -55,9 +57,17 @@ class YouTubeScheduler:
         self.channel_name = channel_name
         self.channel_mgr = ChannelManager()
         self.lock = threading.Lock()
-        
+        self.human_timing = HumanTiming()
+        self.preferred_niche = self.channel_mgr.get_state(channel_name).cfg.get("preferred_niche") if self.channel_mgr.get_state(channel_name) else None
+
         # Ensure uploads folder exists
         Path(UPLOADS_FOLDER).mkdir(exist_ok=True)
+
+        # Apply human-like jitter to scheduled times
+        self.upload_times = [
+            self.human_timing.randomize_schedule_time(upload_time)
+            for upload_time in self.upload_times
+        ]
         
         # Schedule jobs
         self._schedule_jobs()
@@ -65,11 +75,14 @@ class YouTubeScheduler:
         log_line("YouTubeScheduler initialized")
         log_line(f"Upload times: {self.upload_times}")
         log_line(f"Topics: {self.topics}")
+        if self.preferred_niche:
+            log_line(f"Preferred niche: {self.preferred_niche}")
     
     def _schedule_jobs(self):
         """Schedule upload jobs for each time."""
         schedule.clear()  # Clear any existing jobs
         for upload_time in self.upload_times:
+            upload_time = self.human_timing.avoid_pattern(upload_time)
             schedule.every().day.at(upload_time).do(self._run_upload_job)
             log_line(f"Scheduled upload at {upload_time}")
     
@@ -86,9 +99,28 @@ class YouTubeScheduler:
                 log_line(f"Upload limit reached for today. Remaining: {remaining}")
                 return
             
+            # Step 1: Delay upload slightly to feel human-like and check sleep windows
+            if self.human_timing.in_sleep_window():
+                delay_sec = self.human_timing.seconds_until_window_end()
+                log_line(f"In sleep window; delaying upload by {delay_sec} seconds")
+                time.sleep(delay_sec)
+            else:
+                delay_sec = self.human_timing.random_upload_delay()
+                if delay_sec > 0:
+                    log_line(f"Applying upload jitter delay: {delay_sec} seconds")
+                    time.sleep(delay_sec)
+
             # Step 1: Generate script
             log_line("Step 1: Generating script...")
             topic = random.choice(self.topics)
+            if self.preferred_niche:
+                recommended = get_recommended_topics(
+                    niche=self.preferred_niche,
+                    current_topics=self.topics,
+                    limit=8
+                )
+                if recommended:
+                    topic = random.choice(recommended)
             script_dict = generate_script(topic=topic, duration_seconds=45)
             log_line(f"Script generated: {script_dict['topic']}")
             
@@ -129,7 +161,14 @@ class YouTubeScheduler:
             # Step 4: Upload video
             log_line("Step 4: Uploading video...")
             youtube = self.channel_mgr.get_youtube_for_channel(self.channel_name)
-            video_id = upload_video(youtube, video_path, title, description, tags)
+            video_id = upload_video(
+                youtube,
+                video_path,
+                title,
+                description,
+                tags,
+                channel_name=self.channel_name or "default"
+            )
             log_line(f"Video uploaded successfully! ID: {video_id}")
             
             # Record the upload

@@ -1,6 +1,8 @@
 # script_generator.py
 import random
 from datetime import datetime
+from modules.reuse_protection import ensure_unique_script
+from modules.retention_templates import create_retention_script, add_pattern_interrupts, style_pacing, choose_hook
 
 TOPICS = {
     "money": {
@@ -101,35 +103,39 @@ def generate_script(topic=None, duration_seconds=45):
     
     if topic not in TOPICS:
         raise ValueError(f"Unknown topic: {topic}")
-    
-    pool = TOPICS[topic]
-    hook = random.choice(pool["hooks"])
-    body = random.choice(pool["bodies"])
-    cta = random.choice(pool["ctas"])
-    
-    script_text = f"{hook}\n\n{body}\n\n{cta}"
-    
-    # Generate title and metadata
-    title_words = [
-        f"{topic.title()} Secret",
-        f"Why {topic.title()} Matters",
-        f"The Truth About {topic.title()}",
-        f"{topic.title()} Explained",
-        f"This {topic.title()} Hack Works"
-    ]
-    title = f"{random.choice(title_words)}"
-    
-    description = f"Learn about {topic} in this short video. {script_text.split(chr(10))[0]}"
-    
-    tags = [topic, "shorts", "viral", "tips", "howto", topic.replace("-", "")]
-    
-    return {
-        "title": title,
-        "description": description,
-        "tags": tags,
-        "script_text": script_text,
-        "topic": topic
-    }
+
+    def build_script():
+        pool = TOPICS[topic]
+        hook = choose_hook(topic)
+        body = random.choice(pool["bodies"])
+        cta = random.choice(pool["ctas"])
+
+        script_text = create_retention_script(topic, hook, body, cta)
+        if random.random() < 0.4:
+            script_text = add_pattern_interrupts(script_text)
+        script_text = style_pacing(script_text)
+
+        title_words = [
+            f"{topic.title()} Secret",
+            f"Why {topic.title()} Matters",
+            f"The Truth About {topic.title()}",
+            f"{topic.title()} Explained",
+            f"This {topic.title()} Hack Works"
+        ]
+        title = f"{random.choice(title_words)}"
+        description = f"Learn about {topic} in this short video. {script_text.split(chr(10))[0]}"
+        tags = [topic, "shorts", "viral", "tips", "howto", topic.replace("-", "")]
+
+        return {
+            "title": title,
+            "description": description,
+            "tags": tags,
+            "script_text": script_text,
+            "topic": topic
+        }
+
+    script_dict = build_script()
+    return ensure_unique_script(script_dict, build_script)
 
 
 if __name__ == "__main__":

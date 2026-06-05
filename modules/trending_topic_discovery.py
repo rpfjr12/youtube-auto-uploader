@@ -17,6 +17,7 @@ import logging
 import os
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
+from modules.high_cpm_selector import score_niche
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +206,13 @@ def get_recommended_topics(
         if relevance < 1.0 and topic not in current_topics:
             recommendations.append(topic)
     
-    return recommendations[:limit]
+    scored = []
+    for topic in recommendations:
+        cpm_score = score_niche(niche)
+        scored.append((topic, cpm_score))
+
+    scored.sort(key=lambda item: item[1], reverse=True)
+    return [topic for topic, _ in scored][:limit]
 
 
 if __name__ == "__main__":
