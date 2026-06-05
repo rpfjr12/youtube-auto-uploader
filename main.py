@@ -140,6 +140,12 @@ def main():
         help="Run a single test upload (no scheduling)"
     )
     parser.add_argument(
+        "--run-now",
+        "--immediate",
+        action="store_true",
+        help="Run a single upload immediately and exit without scheduling"
+    )
+    parser.add_argument(
         "--github-actions",
         action="store_true",
         help="Run in GitHub Actions mode: one upload then exit cleanly"
@@ -194,7 +200,7 @@ def main():
         channel_name=args.channel
     )
     
-    if args.test or args.github_actions:
+    if args.test or args.run_now or args.github_actions:
         log_line("Running single upload job...")
         try:
             scheduler.run_once()
